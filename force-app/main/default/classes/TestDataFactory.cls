@@ -1,149 +1,114 @@
-@isTest
-public with sharing class TestDataFactory {
+@IsTest
+public class TestDataFactory {
     
-    public static Account createAccount(String name) {
-        Account account = new Account( Name = name);
-        insert account;
-        return account;
-    }
-    
-    public static Contract createContract(Id accountId) {
-        Contract contract = New Contract(AccountId= accountId,
-                                         StartDate= System.today(),
-                                         ContractTerm=12,
-                                         Status='Draft',
-                                         Name = 'contractTest');
-        insert contract;
-        contract.Status = 'Activated';
-        update contract;
-        return contract;
-    }
-    
-    public static Product2 createProduct() {
-        Product2 product = new Product2(
-            IsActive =true,
-            Name = 'ProductTest'
-        );
-        insert product;
-        return product;
-    }
-    
-    public static PricebookEntry createPricebookEntry(Id productId, Decimal amount) {
-        PricebookEntry pricebookEntry = new PricebookEntry(
-            Pricebook2Id = Test.getStandardPricebookId(),
-            Product2Id = productId,
-            UnitPrice = amount,
-            IsActive = false
-        );
-        insert priceBookEntry;
-        return priceBookEntry;     
-    }
-    
-    public static Order createOrder(Id accountId, Id contractId){         
-        Order order = New Order (
-            AccountId = accountId,
-            ContractId = contractId,
-            Status ='Draft',
-            EffectiveDate = Date.today(),
-            Pricebook2Id = Test.getStandardPricebookId()
-        );       
-        insert order;
-        return order;   
-    }            
-    
-    
-    public static OrderItem createOrderItem(Id orderId, Id productId, Integer quantity, Decimal unitPrice,  Id pricebookEntryId) {
-        OrderItem orderItem = new OrderItem(
-            OrderId = orderId,
-            Product2Id= productId,
-            Quantity = quantity,
-            UnitPrice = unitPrice,
-            PricebookEntryId= pricebookEntryId
-        );
-        insert orderItem;
-        return orderItem;
-    }
-    
-    //Method to create a list of Accounts
-    public static List<Account> createAccounts(Integer numberOfaccounts) {
+    public static List<Account> createAccounts(Integer cnt) {
         List<Account> accounts = new List<Account>();
-        
-        for (Integer i = 0 ; i < numberOfaccounts; i++) {
-            Account accts = new Account(
-                Name = 'TestAccount_'+i
-            );
-            accounts.add(accts);
+        for (Integer i = 0 ; i < cnt ; i++) {
+            Account acc = new Account(name = 'TestAccount_' + i);
+            accounts.add(acc);
         }
         insert accounts;
         return accounts;
     }
     
-    //Method to create a list of Orders
-    public static List<Order> createOrders(Account account, PricebookEntry pricebookEntry, Integer numberOrder) {
+    public static Contract createContract(Id accountId) {
+        Contract contract = new Contract(
+            AccountId = accountId,
+            ContractTerm = 12,
+            StartDate = Date.today());
+        insert contract;
+        return contract;
+    }
+    
+    
+    public static List<Order> createOrders(Integer cnt, List<Account>accts, PricebookEntry pbEntry) {
         List<Order> orders = new List<Order>();
-        Contract contract =TestDataFactory.createContract(account.Id); 
-        for(Integer i = 0; i < numberOrder; i++){
-            Order order = TestDataFactory.createOrder(account.Id, contract.Id);
-            order.Name='OrdersTest'+i;
-            orders.add(order);
+        for (Integer i = 0 ; i < accts.size() ; i++) {
+            Account acct = accts[i];
+            
+            for (Integer j = 0 ; j < cnt ; j++) {
+                Order ord = new Order();
+                ord.name = 'Order_' + j;
+                ord.AccountId = acct.Id;
+                ord.EffectiveDate = System.today();
+                ord.Status = 'Draft';
+                ord.Pricebook2Id = pbEntry.Pricebook2Id;
+                orders.add(ord);
+                
+            }
         }
-        update orders;
+        insert orders;
         return orders;
     }
     
-    //Method to create a list of OrderItems
-    public static List<OrderItem> createOrderItems(Integer quantity, List<Order> orders, PricebookEntry pricebookEntry) {
+    public static PricebookEntry createPricebookEntry(Id productId,
+                                                      Decimal amount) {
+                                                          PricebookEntry pbEntry = new PricebookEntry(
+                                                              Pricebook2Id = Test.getStandardPricebookId(),
+                                                              Product2Id = productId,
+                                                              UnitPrice = amount,
+                                                              IsActive = true
+                                                          );
+                                                          insert pbEntry;
+                                                          return pbEntry;
+                                                      }
+    
+    public static Product2 createProduct(String name, String family) {
+        Product2 product = new Product2(
+            Name = name,
+            IsActive = true,
+            Family = family
+        );
+        
+        insert product;
+        return product;
+    }
+    
+    public static List<OrderItem> createOrderItems(Integer num, List<Order> orders, PriceBookEntry pbEntry) {
         List<OrderItem> orderItems = new List<OrderItem>();
-        for (Order order : orders){
+        for (Order ord : orders) {
             OrderItem orderItem = new OrderItem(
-                OrderId = order.Id,
-                PricebookEntryId = pricebookEntry.Id,
-                UnitPrice = pricebookEntry.UnitPrice,
-                Quantity = quantity
+                OrderId = ord.Id,
+                PricebookEntryId = pbEntry.Id,
+                UnitPrice = pbEntry.UnitPrice,
+                Quantity = num
             );
             orderItems.add(orderItem);
         }
         insert orderItems;
         return orderItems;
     }
-    //Method to create One account with several orders
-    public static List<Order> createAccountWithOrders(Integer numberOrders, Id accountId){
+    
+    public static List<OrderItem> createOrderItemsWithRandomQuantity(List<Order> orders, PriceBookEntry pbEntry) {
+        List<OrderItem> orderItems = new List<OrderItem>();
+        Integer min = 1;
+        Integer max = 10;
+        Integer num;
         
-        List<Order> orders = new List<Order>();
-        for(Integer i=0; i<numberOrders; i++) {
-            Order order = new Order(
-                AccountId = accountId,
-                Pricebook2Id = Test.getStandardPricebookId(),
-                status = 'draft',
-                effectiveDate = Date.today()
+        for (Order ord : orders) {
+            num = (Integer) Math.floor(Math.random() * ( max - min + 1 ) + min);
+            OrderItem orderItem = new OrderItem(
+                OrderId = ord.Id,
+                PricebookEntryId = pbEntry.Id,
+                UnitPrice = pbEntry.UnitPrice,
+                Quantity = num
             );
-            orders.add(order);
+            orderItems.add(orderItem);
         }
-        insert orders;
-        Product2 product2 = TestDataFactory.createProduct();
-        PricebookEntry pricebookEntry = TestDataFactory.createPricebookEntry(product2.Id, 100);
-        
-        List<OrderItem> items = new List<OrderItem>();
-        for(Order order: orders) {
-            OrderItem item = new OrderItem (OrderId = order.Id, PricebookEntryId = pricebookEntry.Id, Quantity=1, UnitPrice = 100);
-            items.add(item);
-        }
-        insert items;     
-        
-        update orders;
-        return orders;
-    }   
+        insert orderItems;
+        return orderItems;
+    }
     public static Task createReminderTaskForAccount(Account account) {
-		Task task = new Task(
-			WhatId = account.Id,
-			OwnerId = account.OwnerId,
-			Subject = 'Call',
-			Status = 'Not Started',
-			Priority = 'Normal',
-			IsReminderSet = true,
-			ReminderDateTime = Date.today().addDays(5)
-		);
-		insert task;
-		return task;
-	}
+        Task task = new Task(
+            WhatId = account.Id,
+            OwnerId = account.OwnerId,
+            Subject = 'Call',
+            Status = 'Not Started',
+            Priority = 'Normal',
+            IsReminderSet = true,
+            ReminderDateTime = Date.today().addDays(5)
+        );
+        insert task;
+        return task;
+    }
 }
